@@ -125,13 +125,13 @@ CREATE TRIGGER item_entry AFTER INSERT ON product_items BEGIN
 END;
 --> statement-breakpoint
 CREATE TRIGGER item_change AFTER UPDATE OF status ON product_items WHEN OLD.status<>NEW.status BEGIN
- INSERT INTO stock_movements(item_id,type,actor,reason,reference) VALUES(NEW.id,CASE NEW.status WHEN 'reservado' THEN 'reserva' WHEN 'vendido' THEN 'venda' WHEN 'disponivel' THEN 'devolucao' ELSE 'ajuste' END,NEW.actor,NEW.reason,(SELECT order_id FROM order_items WHERE item_id=NEW.id ORDER BY rowid DESC LIMIT 1));
+ INSERT INTO stock_movements(item_id,type,actor,reason,reference) VALUES(NEW.id,iif(NEW.status='reservado','reserva',iif(NEW.status='vendido','venda',iif(NEW.status='disponivel','devolucao','ajuste'))),NEW.actor,NEW.reason,(SELECT order_id FROM order_items WHERE item_id=NEW.id ORDER BY rowid DESC LIMIT 1));
 END;
 --> statement-breakpoint
 CREATE TRIGGER protect_item_status BEFORE UPDATE OF status ON product_items WHEN NEW.status NOT IN ('disponivel','reservado','vendido','consignado','inativo') BEGIN SELECT RAISE(ABORT,'Status de estoque inválido'); END;
 --> statement-breakpoint
 CREATE TRIGGER order_item_available BEFORE INSERT ON order_items BEGIN
- SELECT CASE WHEN NOT EXISTS(SELECT 1 FROM product_items i JOIN products p ON p.id=i.product_id WHERE i.id=NEW.item_id AND i.status='disponivel' AND p.published=1 AND p.price_cents=NEW.price_cents AND p.id=NEW.product_id) THEN RAISE(ABORT,'Uma peça ficou indisponível ou teve o preço alterado. Atualize o carrinho.') END;
+ SELECT RAISE(ABORT,'Uma peça ficou indisponível ou teve o preço alterado. Atualize o carrinho.') WHERE NOT EXISTS(SELECT 1 FROM product_items i JOIN products p ON p.id=i.product_id WHERE i.id=NEW.item_id AND i.status='disponivel' AND p.published=1 AND p.price_cents=NEW.price_cents AND p.id=NEW.product_id);
 END;
 --> statement-breakpoint
 CREATE TRIGGER reserve_order_item AFTER INSERT ON order_items BEGIN
@@ -139,13 +139,13 @@ CREATE TRIGGER reserve_order_item AFTER INSERT ON order_items BEGIN
 END;
 --> statement-breakpoint
 CREATE TRIGGER validate_order BEFORE UPDATE OF status ON orders WHEN NEW.status='novo' AND OLD.status='draft' BEGIN
- SELECT CASE WHEN NEW.expected_count<>(SELECT COUNT(*) FROM order_items WHERE order_id=NEW.id) OR NEW.total_cents<>COALESCE((SELECT SUM(price_cents) FROM order_items WHERE order_id=NEW.id),0) THEN RAISE(ABORT,'Estoque ou preço alterado. Atualize o carrinho e tente novamente.') END;
+ SELECT RAISE(ABORT,'Estoque ou preço alterado. Atualize o carrinho e tente novamente.') WHERE NEW.expected_count<>(SELECT COUNT(*) FROM order_items WHERE order_id=NEW.id) OR NEW.total_cents<>COALESCE((SELECT SUM(price_cents) FROM order_items WHERE order_id=NEW.id),0);
 END;
 --> statement-breakpoint
 CREATE TRIGGER order_transition BEFORE UPDATE OF status ON orders WHEN OLD.status<>NEW.status BEGIN
- SELECT CASE WHEN NOT ((OLD.status='draft' AND NEW.status='novo') OR (OLD.status='novo' AND NEW.status IN ('confirmado','cancelado','expirado')) OR (OLD.status='confirmado' AND NEW.status IN ('preparando','cancelado')) OR (OLD.status='preparando' AND NEW.status IN ('enviado','entregue','cancelado')) OR (OLD.status='enviado' AND NEW.status='entregue')) THEN RAISE(ABORT,'Transição de pedido inválida') END;
- SELECT CASE WHEN NEW.status IN ('cancelado','expirado') AND OLD.payment='pago' THEN RAISE(ABORT,'Registre o estorno antes de cancelar um pedido pago') END;
- SELECT CASE WHEN NEW.status IN ('enviado','entregue') AND NEW.payment<>'pago' THEN RAISE(ABORT,'Confirme o pagamento antes da entrega') END;
+ SELECT RAISE(ABORT,'Transição de pedido inválida') WHERE NOT ((OLD.status='draft' AND NEW.status='novo') OR (OLD.status='novo' AND NEW.status IN ('confirmado','cancelado','expirado')) OR (OLD.status='confirmado' AND NEW.status IN ('preparando','cancelado')) OR (OLD.status='preparando' AND NEW.status IN ('enviado','entregue','cancelado')) OR (OLD.status='enviado' AND NEW.status='entregue'));
+ SELECT RAISE(ABORT,'Registre o estorno antes de cancelar um pedido pago') WHERE NEW.status IN ('cancelado','expirado') AND OLD.payment='pago';
+ SELECT RAISE(ABORT,'Confirme o pagamento antes da entrega') WHERE NEW.status IN ('enviado','entregue') AND NEW.payment<>'pago';
 END;
 --> statement-breakpoint
 CREATE TRIGGER order_confirm AFTER UPDATE OF status ON orders WHEN NEW.status='confirmado' AND OLD.status='novo' BEGIN
