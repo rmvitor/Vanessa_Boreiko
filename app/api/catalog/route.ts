@@ -1,0 +1,2 @@
+import {configured,sb} from '@/lib/supabase';
+export async function GET(){if(!configured())return Response.json({configured:false});try{const [products,categories]=await Promise.all([sb('/rest/v1/catalog?select=*&order=created_at.desc'),sb<{name:string}[]>('/rest/v1/categories?select=name&order=name')]);return Response.json({configured:true,products,categories:categories.map((c:{name:string})=>c.name)})}catch{return Response.json({error:'O catálogo está indisponível no momento.'},{status:503})}}
