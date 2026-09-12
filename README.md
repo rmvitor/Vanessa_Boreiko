@@ -1,58 +1,68 @@
-# Vanessa Boreiko Acessórios — primeira entrega
+# Vanessa Boreiko Acessórios
 
-Fundação do site e da gestão, sem pedidos, financeiro ou consignações nesta etapa.
+## Versão atual
 
-## Estrutura
+Vitrine com preços de exemplo editáveis, carrinho, checkout sem conta obrigatória, pedidos persistidos e administração com login ChatGPT. D1 e R2 da hospedagem substituem a dependência pendente do Supabase; a migration PostgreSQL anterior foi mantida somente como referência, sem execução nesta versão.
 
-- React 19, Next.js App Router, TypeScript e Tailwind; execução e publicação com Vinext/Cloudflare Workers.
-- `app/page.tsx`: vitrine pública responsiva, usando as fotos fornecidas.
-- `components/storefront.tsx`: categorias, busca, ordenação, detalhes e consulta pelo WhatsApp.
-- `app/admin/page.tsx` e `components/admin.tsx`: login, categorias, grupos, cadastro individual, cadastro por fotos e estoque.
-- `lib/supabase.ts`: cliente HTTP Supabase no servidor, validação de sessão e autorização administrativa.
-- `app/api/catalog`, `app/api/session`, `app/api/admin`, `app/api/upload`: endpoints com validações e proteção de operações.
-- `supabase/migrations/202609120001_foundation.sql`: estrutura PostgreSQL, RLS, Storage e operação atômica de cadastro.
+### Rotas
 
-## Dados
+- `/`: catálogo com busca, categorias, preços, disponibilidade, detalhes e sacola.
+- `/admin`: produtos, preços, estoque, pedidos, clientes, categorias, grupos, histórico e configurações.
+- `/api/catalog`: dados comerciais e disponibilidade agregada, sem custos.
+- `/api/orders`: criação transacional e consulta do comprovante por token aleatório.
+- `/api/admin`: leitura e alterações autorizadas no servidor.
+- `/api/upload` e `/api/images/[key]`: imagens em R2.
 
-Tabelas: `categories`, `sales_groups`, `products`, `product_items`, `product_images`, `product_costs`, `admin_users`, `stock_movements`. A view `catalog` expõe apenas informações comerciais e disponibilidade agregada. Custos, localização e códigos de peças não são públicos.
+### Dados e comportamento
 
-Produtos, peças e grupos são entidades distintas. Cada foto no cadastro rápido gera um produto e uma peça de quantidade 1. O cadastro individual aceita diversas fotos do mesmo produto. Códigos VB são gerados no banco. Um trigger registra entradas e alterações no estoque. O cadastro de um lote é uma transação PostgreSQL: falhas não deixam produtos parcialmente cadastrados.
+Schema Drizzle em `db/schema.ts`; migrations versionadas em `drizzle/`. Tabelas: categories, sales_groups, products, product_images, product_items, stock_movements, customers, orders, order_items e settings. IDs técnicos UUID, códigos amigáveis VB por sequência. Valores monetários inteiros em centavos no banco.
 
-## Ativar o Supabase
+Sete produtos com fotos fornecidas, preços fictícios de R$ 29,90 a R$ 89,90 e uma peça cada são cadastrados uma única vez. O bootstrap é idempotente e não sobrescreve preços, nomes ou estoque alterados. São dados iniciais para revisão, não alegações de estoque real.
 
-1. Crie ou escolha um projeto Supabase.
-2. Execute a migration no SQL Editor ou com `supabase db push` após vincular o projeto.
-3. No Supabase Auth, crie o usuário administrativo com e-mail e senha. Não há autoinscrição administrativa.
-4. No SQL Editor, autorize o UUID desse usuário:
+Cada peça tem identidade própria. Cadastro de quantidade N cria N peças. Cadastro rápido cria um modelo/peça por foto. Reposição cria peças adicionais; inativação só atua sobre peças disponíveis. Entradas e mudanças de status geram histórico por triggers.
 
-```sql
-insert into public.admin_users(user_id) values ('UUID-DO-USUARIO');
-```
+A sacola é um rascunho local, sem reservar estoque. Ao enviar o pedido, o servidor valida preços e disponibilidade dentro de uma transação, associa as peças e inicia a reserva (30 minutos, configurável). Quantidade insuficiente, preço alterado ou tentativa concorrente desfazem o pedido inteiro. A chave de idempotência evita repetição do mesmo envio. Endereço separado é obrigatório apenas na opção Entrega.
 
-5. Copie `.env.example` para `.env` e informe `SUPABASE_URL` e `SUPABASE_ANON_KEY`. Uma chave pública é suficiente. Não use `service_role`. Configure os mesmos valores no ambiente hospedado.
-6. Reinicie o site e entre em `/admin`.
+Reservas vencidas são liberadas na próxima consulta de catálogo, pedidos ou administração — não há execução agendada em segundo plano. Confirmação ou pagamento transforma reserva em venda. Cancelamento permitido antes do envio libera estoque; um pedido pago exige registro prévio de estorno. Confirmar pagamento não cobra dinheiro nem executa estorno bancário. Pedidos mantêm os preços registrados, mesmo que o catálogo seja alterado.
 
-Sem configuração, a vitrine mostra somente as fotos fornecidas, com nomes descritivos provisórios e valores/disponibilidade sob consulta. Não cria estoque fictício. O login fica inativo. Ao conectar o banco, o catálogo passa a usar os registros reais, inclusive o estado vazio inicial.
+O cliente vê o número e pode recuperar o último comprovante no mesmo navegador. A consulta por token mostra itens, valores e status, sem endereço ou telefone. Clientes com o mesmo WhatsApp são agrupados. Frete e pagamento são combinados com a loja, sem gateway ou cálculo de transporte.
 
-## Execução local
+### Acesso
 
-Node.js 22.13 ou superior, npm instalado:
+O login usa os helpers oficiais de ChatGPT em `app/chatgpt-auth.ts`. `lib/auth.ts` limita a administração à conta proprietária identificada no serviço de Sites. Uma conta ChatGPT qualquer não recebe acesso administrativo. O simulador local Seedy só é aceito em modo development; a publicação usa o login verdadeiro e a autorização do servidor. O site permanece privado ao proprietário até pedido explícito de mudança de público.
+
+### Componentes
+
+`storefront`, `cart`, `admin`, `product-form`, `order-detail` e `choice`, usando os primitives existentes de dialog, sheet, tabs, select, radio-group, switch e table. O tema da marca e as fotos originais foram preservados.
+
+## Executar localmente
+
+Node.js 22.13+ e npm:
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Abra `http://localhost:5173`. Verificação: `npx tsc --noEmit` e `npm run build`. `npm start` serve a compilação local.
+Configure um arquivo Wrangler local com binding DB, database_id `00000000-0000-4000-8000-000000000000`, database_name `site-creator-d1` e migrations_dir apontando para `drizzle`. Execute:
 
-## Validação e limites
+```sh
+npx wrangler d1 migrations apply DB --local --config .wrangler/migrate.json --persist-to .wrangler/state
+```
 
-O Supabase não foi provisionado nem recebeu a migration automaticamente: faltam os dados do projeto. Portanto, login real, políticas RLS, upload, persistência e transações precisam de teste integrado após configuração. Nenhum sucesso de gravação é simulado no navegador. A sessão expira conforme o token Supabase e exige novo login; renovação automática fica pendente. Uploads concluídos antes de um cadastro interrompido podem deixar arquivos órfãos no Storage, sem registros de produto; limpeza fica pendente.
+Acesse `http://localhost:5173`. O botão Entrar com ChatGPT usa o simulador local da hospedagem. No site publicado, usa a conta real.
 
-Não foi solicitado teste visual automatizado no navegador. A responsividade foi implementada em CSS. WebMCP tem filtro opcional, com detecção de suporte; não foi verificado em um contexto WebMCP compatível.
+```sh
+npx tsc --noEmit
+npm run build
+node tests/integration.mjs
+node tests/reservation.mjs
+```
 
-Próxima validação: criar usuário administrador, negar usuário não autorizado, cadastrar/editar categoria, cadastrar produto com foto, cadastrar lote, conferir códigos e movimentações, e verificar leitura anônima sem acesso a custos/estoque interno.
+O teste de integração exige a prévia local e migrations aplicadas. Cria fixtures somente no banco local, ocultando o produto ao terminar. Testa autorização, adulteração de preço, corrida pela última peça, rollback, reenvio idempotente, comprovante, preço histórico, pagamento, estorno, cancelamento, agrupamento de clientes e restrições de upload. O teste de reserva verifica triggers e expiração em SQLite isolado.
 
-## Etapas posteriores
+## Limites e próximas etapas
 
-Pedidos, carrinho, reservas, vendas, modo evento, financeiro, consignações, etiquetas e portal de revendedoras aguardam validação desta base. Preços, composição e estoque das fotos fornecidas precisam ser cadastrados pela loja. O telefone e Instagram foram transcritos das imagens.
+Sem cobrança automática, notificações automáticas ou mensagens enviadas. Confirmar um pedido ou pagamento é uma operação administrativa, não uma transação bancária. Uploads abandonados podem deixar arquivos órfãos no R2. Listagem administrativa mostra os últimos 200 pedidos/clientes e 150 movimentos; paginação/exportação ampliada ficam para evolução.
+
+Vendas presenciais/modo evento, financeiro operacional, consignações, etiquetas, relatórios avançados e portal de revendedoras são módulos posteriores do briefing. O filtro WebMCP anterior foi preservado; validação em ambiente WebMCP compatível continua pendente.

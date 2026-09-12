@@ -1,0 +1,11 @@
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync} from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new DatabaseSync(':memory:');db.exec('PRAGMA foreign_keys=ON');for(const name of readdirSync('drizzle').filter(n=>n.endsWith('.sql')).sort())db.exec(readFileSync('drizzle/'+name,'utf8'));
+db.exec("INSERT INTO categories VALUES('cat','Categoria'); INSERT INTO products(id,name,category_id,price_cents) VALUES('p','Produto','cat',3990); INSERT INTO product_items(id,product_id) VALUES('piece','p'); INSERT INTO customers(id,name,phone) VALUES('c','Cliente','41999998888'); INSERT INTO orders(id,request_key,receipt_hash,customer_id,name,phone,delivery,expected_count,total_cents,expires_at) VALUES('o','key','hash','c','Cliente','41999998888','retirada',1,3990,'2000-01-01T00:00:00.000Z'); INSERT INTO order_items(id,order_id,item_id,product_id,name,image,price_cents) VALUES('line','o','piece','p','Produto','/images/peca-3.png',3990); UPDATE orders SET status='novo' WHERE id='o';");
+assert.equal(db.prepare('SELECT status FROM product_items').get().status,'reservado');
+db.exec("UPDATE orders SET status='expirado',actor='sistema' WHERE status='novo' AND expires_at < strftime('%Y-%m-%dT%H:%M:%fZ','now')");
+assert.equal(db.prepare('SELECT status FROM orders').get().status,'expirado');assert.equal(db.prepare('SELECT status FROM product_items').get().status,'disponivel');assert.equal(db.prepare("SELECT count(*) n FROM stock_movements WHERE type='devolucao'").get().n,1);
+assert.throws(()=>db.exec("UPDATE orders SET status='confirmado' WHERE id='o'"));
+assert.equal(db.prepare('SELECT status FROM orders').get().status,'expirado');
+console.log('PASS: schema migrations, automatic reservation expiry, stock release, audit entry, forbidden expired-order transition.');db.close();
