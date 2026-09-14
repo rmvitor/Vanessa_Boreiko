@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `origin` text DEFAULT 'Site' NOT NULL;

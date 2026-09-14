@@ -1,0 +1,5 @@
+import {getAdmin,sameOrigin} from '@/lib/auth';
+import {operation,operationsData} from '@/lib/operations';
+import {expireOrders} from '@/lib/database';
+export async function GET(){if(!await getAdmin())return Response.json({error:'Acesso restrito.'},{status:401});try{await expireOrders();return Response.json(await operationsData(),{headers:{'Cache-Control':'private, no-store'}})}catch(e){console.error(e);return Response.json({error:'Não foi possível carregar as operações.'},{status:503})}}
+export async function POST(r:Request){if(!sameOrigin(r))return Response.json({error:'Origem inválida.'},{status:403});const user=await getAdmin();if(!user)return Response.json({error:'Acesso restrito.'},{status:401});try{return Response.json(await operation(await r.json(),user.userId))}catch(e){console.error(e);return Response.json({error:e instanceof Error&&!/SQLITE|D1_|constraint|\[/.test(e.message)?e.message:'Confira os campos e atualize o estoque. Nenhuma alteração foi concluída.'},{status:400})}}

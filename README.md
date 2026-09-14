@@ -66,3 +66,17 @@ O teste de integração exige a prévia local e migrations aplicadas. Cria fixtu
 Sem cobrança automática, notificações automáticas ou mensagens enviadas. Confirmar um pedido ou pagamento é uma operação administrativa, não uma transação bancária. Uploads abandonados podem deixar arquivos órfãos no R2. Listagem administrativa mostra os últimos 200 pedidos/clientes e 150 movimentos; paginação/exportação ampliada ficam para evolução.
 
 Vendas presenciais/modo evento, financeiro operacional, consignações, etiquetas, relatórios avançados e portal de revendedoras são módulos posteriores do briefing. O filtro WebMCP anterior foi preservado; validação em ambiente WebMCP compatível continua pendente.
+
+## Beta ampliada
+
+A rota `/admin/operacoes` reúne venda manual, modo Evento, reserva de live, financeiro, relatórios CSV, revendedoras, consignações, acertos, repasses, cadastro manual de clientes, informações complementares/fotos de produtos, localização das peças, códigos de grupo, etiquetas, cupons e kits. Vendas individuais e consignações usam transações com validações no banco; códigos de grupo registram explicitamente vendas sem baixa individual.
+
+O catálogo inclui filtros por faixa de preço, cor, material, coleção, disponibilidade e novidades; favoritos locais; galeria; `/produto/[id]` compartilhável e QR Code. Cupons são validados no servidor, preservando o desconto no pedido. Kits agrupam produtos, sem eliminar sua identidade ou inventar estoque.
+
+O portal `/revendedora` usa a conta ChatGPT vinculada ao e-mail do cadastro; somente a dona pode escolher uma revendedora para prévia. A audiência do Site continua privada ao proprietário. Cadastro de revendedora não concede acesso à hospedagem. PWA inclui manifesto e tela de indisponibilidade de conexão, sem armazenar dados privados ou permitir operações offline.
+
+Migrations adicionais 0002–0005: vendas, linhas, despesas, revendedoras, consignações e acertos, repasses, detalhes de clientes e produtos, códigos rápidos, custos históricos, cupons, descontos, kits e origem dos pedidos. Migrations 0000/0001 publicadas permanecem intactas.
+
+Validação: TypeScript, lint direcionado e testes `integration.mjs`, `reservation.mjs`, `operations.mjs`, `promotions.mjs`. Revisão local em largura de celular e geração de código de barras. Fixtures de testes existem apenas no banco local, não fazem parte do pacote publicado.
+
+Limites da beta: confirmação de recebimento/estorno é manual, sem movimentação bancária; mensagens automáticas e notificações push externas não estão conectadas. Leitura de código funciona com leitor em modo teclado, sem câmera integrada. Impressão usa o navegador, sem integração de driver térmico. Relatórios indicam custos ausentes (pedidos legados e vendas de grupo); custos e preços dos novos itens são preservados, mas categorias e grupos dos pedidos de catálogo refletem o cadastro atual. Relatórios de consignação preservam valor e comissão no acerto. Reservas expiram na próxima consulta. A ativação pública e integrações comerciais dependem da decisão sobre continuidade do projeto.

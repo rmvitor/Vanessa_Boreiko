@@ -1,0 +1,2 @@
+import {all} from './database';
+export async function couponDiscount(code:string,total:number){if(!code.trim())return 0;const [c]=await all<{kind:string;value:number}>('SELECT * FROM coupons WHERE code=? AND active=1 AND expires>=?',code.trim().toUpperCase(),new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'}));if(!c)throw Error('Cupom inválido ou vencido.');return Math.max(0,Math.min(total-1,c.kind==='percentual'?Math.round(total*c.value/10000):c.value))}
