@@ -1,0 +1,6 @@
+export async function uploadPhoto(file:File){
+ if(file.size>35*1024*1024)throw Error(`${file.name}: a foto excede 35 MB.`);
+ const url=URL.createObjectURL(file);let blob:Blob;
+ try{const image=new Image();image.src=url;await image.decode();const scale=Math.min(1,1800/Math.max(image.width,image.height)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));const ctx=canvas.getContext('2d');if(!ctx)throw Error();ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error()),'image/jpeg',.86));}catch{throw Error(`${file.name}: não foi possível abrir a foto. Use JPG, PNG ou WebP. No iPhone, exporte fotos HEIC como JPG.`)}finally{URL.revokeObjectURL(url)}
+ const form=new FormData();form.set('file',blob,'foto.jpg');const r=await fetch('/api/upload',{method:'POST',body:form});const data=await r.json().catch(()=>({error:'O envio foi interrompido. Verifique a conexão e tente novamente.'})) as {url?:string;error?:string};if(!r.ok||!data.url)throw Error(data.error||'Não foi possível enviar a foto.');return data.url;
+}

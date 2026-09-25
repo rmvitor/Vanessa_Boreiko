@@ -24,13 +24,10 @@ assert.equal((await post({action:'settle',id:lines[2].id,status:'perdida'})).sta
 assert.equal((await post({action:'receipt',reseller_id:reseller.id,amount_cents:4001,date:'2026-09-12',notes:''})).status,400);
 assert.equal((await post({action:'receipt',reseller_id:reseller.id,amount_cents:4000,date:'2026-09-12',notes:''})).status,200);
 assert.equal((await post({action:'receipt',reseller_id:reseller.id,amount_cents:1,date:'2026-09-12',notes:''})).status,400);
-const quickCode='TEST-'+Date.now();assert.equal((await post({action:'quick',code:quickCode,name:'Teste grupo',group_id:group,category_id:cat,price_cents:3990})).status,200);
-o=(await ops()).data;const quick=o.quick.find(q=>q.code===quickCode),before=(await admin()).data.items.filter(i=>i.status==='disponivel').length;
-const quickSale={action:'sale',request_key:crypto.randomUUID(),origin:'Evento',method:'dinheiro',items:[{quick_id:quick.id,quantity:2}]};assert.equal((await post(quickSale)).status,200);assert.equal((await post(quickSale)).status,200);
-assert.equal((await admin()).data.items.filter(i=>i.status==='disponivel').length,before);
+assert.equal((await post({action:'quick',code:'RETIRED',name:'Teste grupo',group_id:group,category_id:cat,price_cents:3990})).status,400);
 assert.equal((await post({action:'expense',description:'Teste local',category:'Eventos',amount_cents:1000,date:'2026-09-12',method:'pix',notes:''})).status,200);
 assert.equal((await call('/api/reports')).status,200);
 assert.equal((await post({action:'details',id:p.id,supplier:'Fornecedor',acquired:'2026-09-12',notes:'Privado',collection:'Teste',featured:true,images:['/images/peca-3.png','/images/peca-5.png']})).status,200);
 const catalog=(await call('/api/catalog',undefined,false)).data.products.find(x=>x.id===p.id);assert.equal(catalog.images.length,2);assert.equal(catalog.collection,'Teste');assert(!('supplier' in catalog));assert(!('cost_cents' in catalog));
 await call('/api/admin',{action:'edit_product',...p,published:false});
-console.log('PASS: operations auth, last-piece race, sale cancellation, consignment stock, single settlement, commission balance, overpayment guard, group sale without stock, idempotency, expenses, reports and private product metadata.');
+console.log('PASS: operations auth, last-piece race, sale cancellation, consignment stock, single settlement, commission balance, overpayment guard, retired untracked group sale, expenses, reports and private product metadata.');

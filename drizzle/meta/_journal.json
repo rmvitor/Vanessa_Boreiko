@@ -43,6 +43,13 @@
       "when": 1789238782074,
       "tag": "0005_opposite_chameleon",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790295588782,
+      "tag": "0006_steady_madrox",
+      "breakpoints": true
     }
   ]
 }

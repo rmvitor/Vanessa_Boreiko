@@ -26,3 +26,5 @@ export const coupons=sqliteTable('coupons',{id:text().primaryKey(),code:text().n
 export const orderDiscounts=sqliteTable('order_discounts',{orderId:text('order_id').primaryKey().references(()=>orders.id),code:text().notNull(),amount:integer('amount_cents').notNull()});
 export const kits=sqliteTable('kits',{id:text().primaryKey(),name:text().notNull(),active:integer().notNull().default(1)});
 export const kitItems=sqliteTable('kit_items',{id:text().primaryKey(),kitId:text('kit_id').notNull().references(()=>kits.id),productId:text('product_id').notNull().references(()=>products.id)},t=>[index('kit_items_kit').on(t.kitId)]);
+export const inventoryLots=sqliteTable('inventory_lots',{id:text().primaryKey(),code:text().notNull().unique(),productId:text('product_id').notNull().unique().references(()=>products.id),groupId:text('group_id').references(()=>groups.id),createdAt:now()});
+export const productRequests=sqliteTable('product_requests',{key:text().primaryKey(),createdAt:now()});

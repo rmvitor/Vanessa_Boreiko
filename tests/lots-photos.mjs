@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+const base='http://localhost:5173';const login=await fetch(base+'/signin-with-chatgpt?return_to=/admin',{redirect:'manual'}),cookie=login.headers.get('set-cookie').split(';')[0];
+async function call(path,body){const r=await fetch(base+path,{method:body?'POST':'GET',headers:{Cookie:cookie,Origin:base,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()}}
+const admin=()=>call('/api/admin'),ops=()=>call('/api/operations'),post=d=>call('/api/operations',d);
+const initial=(await admin()).data,category=initial.categories[0].id,tag='Teste lote '+crypto.randomUUID();
+const lotPayload={action:'lot',request_key:crypto.randomUUID(),name:tag,category_id:category,group_id:null,price_cents:1000,cost_cents:200,quantity:5};
+assert.equal((await post(lotPayload)).status,200);assert.equal((await post(lotPayload)).status,200);
+let data=(await ops()).data,lot=data.inventoryLots.find(l=>l.name===tag);assert.equal(lot.quantity,5);assert.equal(data.inventoryLots.filter(l=>l.name===tag).length,1);
+const sale=()=>({action:'sale',request_key:crypto.randomUUID(),origin:'Evento',method:'pix',items:[{lot_id:lot.id,quantity:3}]});const first=sale(),second=sale();const race=await Promise.all([post(first),post(second)]);assert.deepEqual(race.map(r=>r.status).sort(),[200,400]);
+data=(await ops()).data;assert.equal(data.inventoryLots.find(l=>l.id===lot.id).quantity,2);const winner=race[0].status===200?first:second;assert.equal((await post(winner)).status,200);
+const live={action:'live',request_key:crypto.randomUUID(),customer:'Cliente local',phone:'41999998888',items:[],lot_items:[{lot_id:lot.id,quantity:2}]};assert.equal((await post(live)).status,200);assert.equal((await post(live)).status,200);
+assert.equal((await ops()).data.inventoryLots.find(l=>l.id===lot.id).quantity,0);
+const order=(await admin()).data.orders.find(o=>o.items.some(i=>i.name===tag));assert(order);assert.equal((await call('/api/admin',{action:'order_status',id:order.id,status:'cancelado',expected_status:'novo'})).status,200);
+data=(await ops()).data;const sold=data.sales.find(s=>data.lines.some(l=>l.sale_id===s.id&&l.name===tag));assert.equal((await post({action:'cancel_sale',id:sold.id,reason:'Teste de retorno'})).status,200);assert.equal((await ops()).data.inventoryLots.find(l=>l.id===lot.id).quantity,5);
+assert.equal((await post({action:'sale',request_key:crypto.randomUUID(),origin:'Evento',method:'pix',items:[{quick_id:'qualquer',quantity:1}]})).status,400);
+const key=crypto.randomUUID(),photoTag='Foto teste '+crypto.randomUUID(),products=Array.from({length:30},(_,i)=>({name:photoTag+' '+i,category_id:category,price:10,cost:2,quantity:1,images:['/images/peca-3.png'],published:false}));
+assert.equal((await call('/api/admin',{action:'products',request_key:key,products})).status,200);assert.equal((await call('/api/admin',{action:'products',request_key:key,products})).status,200);
+const final=(await admin()).data;assert.equal(final.products.filter(p=>p.name.startsWith(photoTag)).length,30);assert.equal(final.items.filter(p=>p.name.startsWith(photoTag)).length,30);
+const invalid=products.map(p=>({...p,name:p.name+' rollback'}));invalid[15].category_id='missing';assert.equal((await call('/api/admin',{action:'products',request_key:crypto.randomUUID(),products:invalid})).status,400);assert.equal((await admin()).data.products.filter(p=>p.name.startsWith(photoTag)&&p.name.endsWith('rollback')).length,0);
+console.log('PASS: lot quantities, concurrent oversell prevention, idempotent sale and live reservation, cancellation release, retired untracked codes, 30-photo batch, idempotent photos and atomic rollback.');

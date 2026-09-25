@@ -69,7 +69,7 @@ Vendas presenciais/modo evento, financeiro operacional, consignações, etiqueta
 
 ## Beta ampliada
 
-A rota `/admin/operacoes` reúne venda manual, modo Evento, reserva de live, financeiro, relatórios CSV, revendedoras, consignações, acertos, repasses, cadastro manual de clientes, informações complementares/fotos de produtos, localização das peças, códigos de grupo, etiquetas, cupons e kits. Vendas individuais e consignações usam transações com validações no banco; códigos de grupo registram explicitamente vendas sem baixa individual.
+A rota `/admin/operacoes` reúne venda manual, modo Evento, reserva de live, financeiro, relatórios CSV, revendedoras, consignações, acertos, repasses, cadastro manual de clientes, informações complementares/fotos de produtos, localização das peças, códigos de grupo, etiquetas, cupons e kits. Vendas individuais e consignações usam transações com validações no banco; vendas antigas por código de grupo permanecem no histórico. Novas vendas genéricas usam lotes com quantidade e baixa de estoque.
 
 O catálogo inclui filtros por faixa de preço, cor, material, coleção, disponibilidade e novidades; favoritos locais; galeria; `/produto/[id]` compartilhável e QR Code. Cupons são validados no servidor, preservando o desconto no pedido. Kits agrupam produtos, sem eliminar sua identidade ou inventar estoque.
 
@@ -79,4 +79,13 @@ Migrations adicionais 0002–0005: vendas, linhas, despesas, revendedoras, consi
 
 Validação: TypeScript, lint direcionado e testes `integration.mjs`, `reservation.mjs`, `operations.mjs`, `promotions.mjs`. Revisão local em largura de celular e geração de código de barras. Fixtures de testes existem apenas no banco local, não fazem parte do pacote publicado.
 
-Limites da beta: confirmação de recebimento/estorno é manual, sem movimentação bancária; mensagens automáticas e notificações push externas não estão conectadas. Leitura de código funciona com leitor em modo teclado, sem câmera integrada. Impressão usa o navegador, sem integração de driver térmico. Relatórios indicam custos ausentes (pedidos legados e vendas de grupo); custos e preços dos novos itens são preservados, mas categorias e grupos dos pedidos de catálogo refletem o cadastro atual. Relatórios de consignação preservam valor e comissão no acerto. Reservas expiram na próxima consulta. A ativação pública e integrações comerciais dependem da decisão sobre continuidade do projeto.
+Limites da beta: confirmação de recebimento/estorno é manual, sem movimentação bancária; mensagens automáticas e notificações push externas não estão conectadas. Leitura de código funciona por câmera (com permissão em HTTPS) ou leitor em modo teclado. A câmera requer validação no celular real; a revisão local cobre a interface e a entrada por código. Impressão usa o navegador, sem integração de driver térmico. Relatórios indicam custos ausentes (pedidos legados e vendas de grupo); custos e preços dos novos itens são preservados, mas categorias e grupos dos pedidos de catálogo refletem o cadastro atual. Relatórios de consignação preservam valor e comissão no acerto. Reservas expiram na próxima consulta. A ativação pública e integrações comerciais dependem da decisão sobre continuidade do projeto.
+
+## Atualização de lotes e caixa mobile
+
+- /vendas: caixa exclusivo Live & Evento, busca e leitura de códigos VB e LOT, resumo móvel e venda ou reserva.
+- /admin/operacoes?tab=lotes: cadastro e reposição de lotes genéricos com quantidade real. Cada unidade participa das mesmas transações de estoque. Lotes começam ocultos no catálogo.
+- Fotos são otimizadas no navegador, com prévia, progresso e reenvio idempotente. Cadastro rápido usa lote SQL atômico.
+- Links de gestão preservam a aba na URL. Adicionar ao carrinho mostra confirmação sem abri-lo.
+- Migration 0006 adiciona lotes e chaves de cadastro; testes em tests/lots-photos.mjs cobrem concorrência, cancelamentos, reservas e cadastro de 30 fotos.
+
