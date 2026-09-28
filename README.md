@@ -89,3 +89,15 @@ Limites da beta: confirmação de recebimento/estorno é manual, sem movimentaç
 - Links de gestão preservam a aba na URL. Adicionar ao carrinho mostra confirmação sem abri-lo.
 - Migration 0006 adiciona lotes e chaves de cadastro; testes em tests/lots-photos.mjs cobrem concorrência, cancelamentos, reservas e cadastro de 30 fotos.
 
+
+## Disponibilidade e lotes (setembro/2026)
+
+Produtos e lotes usam seleção múltipla de disponibilidade: Evento, Live, Site e Consignado. Os canais compartilham o saldo. Catálogo público e operações validam a disponibilidade no servidor, inclusive contra requisições manuais. Os cadastros existentes preservam a visibilidade anterior no Site; os demais canais permanecem habilitados para revisão administrativa.
+
+Em `/admin?tab=produtos`, produtos individuais ficam separados de `/admin?tab=lotes`. Lotes podem começar vazios, receber entradas, alterar nome/categoria/preços/finalidade/canais e transferir quantidades disponíveis. O destino define preços e canais futuros; preços históricos não são alterados. Transferências são atômicas, idempotentes e auditadas. Reservas e consignações não podem ser transferidas. A interface de lotes usa quantidade agregada; registros internos mantêm a rastreabilidade do estoque existente. Consignações permitem envio e acerto de lotes por quantidade.
+
+Em `/vendas`, as abas Nova venda e Vendas registradas funcionam no celular. Há seleção de Evento/Live e categoria, busca de vendas por código, cliente ou data e detalhes/cancelamento. A busca de histórico mostra até 50 resultados por consulta.
+
+Apagar produtos e pedidos faz exclusão recuperável. Produtos com reservas ou consignações não podem ser excluídos; os demais saem do catálogo e das vendas. A restauração fica em Mostrar excluídos/Lotes excluídos. Pedidos pendentes são cancelados na exclusão e liberam o estoque; pedidos pagos pendentes exigem estorno registrado. Pedidos enviados/entregues podem ser ocultados sem desfazer a venda. Restaurar um pedido não reabre a reserva. O histórico financeiro e de estoque é preservado.
+
+Migrations 0007 e 0008 adicionam disponibilidade, exclusão, transferências e proteção contra mudança de lote durante a venda. Testes em `tests/channels-lots.mjs` cobrem canais, concorrência, transferência, consignação por quantidade, exclusão/restauração e pagamento. Verificações de interface usam prévia local, sem cadastrar testes em produção.
