@@ -101,3 +101,13 @@ Em `/vendas`, as abas Nova venda e Vendas registradas funcionam no celular. Há 
 Apagar produtos e pedidos faz exclusão recuperável. Produtos com reservas ou consignações não podem ser excluídos; os demais saem do catálogo e das vendas. A restauração fica em Mostrar excluídos/Lotes excluídos. Pedidos pendentes são cancelados na exclusão e liberam o estoque; pedidos pagos pendentes exigem estorno registrado. Pedidos enviados/entregues podem ser ocultados sem desfazer a venda. Restaurar um pedido não reabre a reserva. O histórico financeiro e de estoque é preservado.
 
 Migrations 0007 e 0008 adicionam disponibilidade, exclusão, transferências e proteção contra mudança de lote durante a venda. Testes em `tests/channels-lots.mjs` cobrem canais, concorrência, transferência, consignação por quantidade, exclusão/restauração e pagamento. Verificações de interface usam prévia local, sem cadastrar testes em produção.
+
+## Rotinas e sessões de live/evento
+
+`/admin/operacoes?tab=rotinas` reúne conferências diárias de pedidos, pagamentos e reservas; e semanais de consignações, repasses, custos e despesas. Cada período segue o fuso de São Paulo, com observação e histórico das conferências. Não há envio automático de lembretes.
+
+`/vendas` e `/admin/operacoes?tab=sessoes` permitem abrir uma sessão identificada por nome, canal e local, selecionar produtos/lotes e repor estoque durante o evento. O saldo enviado fica exclusivo da sessão: não pode ser vendido no catálogo, consignado ou transferido entre lotes. O caixa e as reservas de live usam somente esse estoque.
+
+No fechamento, conte o retorno por produto/lote e informe o total recebido. Reservas e pagamentos pendentes precisam ser resolvidos antes. Quantidades conferidas retornam ao produto/lote e local de origem; faltas exigem justificativa e ficam inativas, preservando os registros. Diferenças financeiras também exigem observação. Vendas encerradas não podem ser canceladas; correções posteriores precisam de uma rotina de ajuste futura. Vendas anteriores à implantação continuam no histórico geral, sem associação retroativa a sessões.
+
+A migration 0009 adiciona sessões, saídas, fechamentos e conferências. `node tests/events.mjs` valida isolamento, idempotência, concorrência, reposição, reservas, pagamentos, retorno e divergências no banco local. O rodapé do catálogo fica centralizado no celular.
